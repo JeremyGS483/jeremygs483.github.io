@@ -1,77 +1,120 @@
-// Selecciona los elementos canvas
-const timeDomainCanvas = document.getElementById('timeDomainCanvas');
-const frequencyDomainCanvas = document.getElementById('frequencyDomainCanvas');
-const timeDomainCtx = timeDomainCanvas.getContext('2d');
-const frequencyDomainCtx = frequencyDomainCanvas.getContext('2d');
+document.getElementById('fileInput').addEventListener('change', function(event) {
+const file = event.target.files[0];
+if (file) {
+    const reader = new FileReader();
+    reader.onload = function(e) {
+        const arrayBuffer = e.target.result;
+        processAudio(arrayBuffer);
+        };
+    reader.readAsArrayBuffer(file);
+    }
+});
 
-// Web Audio API
-navigator.mediaDevices.getUserMedia({ audio: true })
-  .then(stream => {
+async function processAudio(arrayBuffer) {
     const audioContext = new (window.AudioContext || window.webkitAudioContext)();
-    const source = audioContext.createMediaStreamSource(stream);
-    const analyser = audioContext.createAnalyser();
+    const audioBuffer = await audioContext.decodeAudioData(arrayBuffer);
 
-    // Configuración del analizador
-    analyser.fftSize = 2048;
-    const bufferLength = analyser.frequencyBinCount;
-    const dataArray = new Uint8Array(bufferLength);
-    const freqArray = new Uint8Array(bufferLength);
+    const sampleRate = audioBuffer.sampleRate;
+    const audioData = audioBuffer.getChannelData(0);  // Assuming mono audio
 
-    source.connect(analyser);
+    console.log('Sample Rate:', sampleRate);
 
-    function draw() {
-      requestAnimationFrame(draw);
+    const audioDataArray = Array.from(audioData);
+    const discreteValues = Array.from({length: audioDataArray.length}, (_, i) => i);
+    console.log(audioDataArray);
+    console.log(discreteValues);
 
-      // Tiempo
-      analyser.getByteTimeDomainData(dataArray);
+    function calcularDFT(signal){
+        var N = signal.length;
+        var dftReal = [];
+        var dftImag = [];
 
-      timeDomainCtx.fillStyle = 'rgb(200, 200, 200)';
-      timeDomainCtx.fillRect(0, 0, timeDomainCanvas.width, timeDomainCanvas.height);
-      timeDomainCtx.lineWidth = 2;
-      timeDomainCtx.strokeStyle = 'rgb(0, 0, 0)';
-      timeDomainCtx.beginPath();
+        for(var f=0; f < N; f++){
+            var sumReal = 0;
+            var sumImag = 0;
 
-      const sliceWidth = timeDomainCanvas.width * 1.0 / bufferLength;
-      let x = 0;
+            for(var n=0; n < N; n++){
+                var angle = (2*Math.PI*f*n) / N;
+                sumReal += signal[n] * Math.cos(angle);
+                sumImag -= signal[n] * Math.sin(angle);
+            }
 
-      for (let i = 0; i < bufferLength; i++) {
-        const v = dataArray[i] / 128.0;
-        const y = v * timeDomainCanvas.height / 2;
+            dftReal.push(sumReal);
+            dftImag.push(sumImag);
 
-        if (i === 0) {
-          timeDomainCtx.moveTo(x, y);
-        } else {
-          timeDomainCtx.lineTo(x, y);
         }
 
-        x += sliceWidth;
-      }
-
-      timeDomainCtx.lineTo(timeDomainCanvas.width, timeDomainCanvas.height / 2);
-      timeDomainCtx.stroke();
-
-      // Frecuencia
-      analyser.getByteFrequencyData(freqArray);
-
-      frequencyDomainCtx.fillStyle = 'rgb(200, 200, 200)';
-      frequencyDomainCtx.fillRect(0, 0, frequencyDomainCanvas.width, frequencyDomainCanvas.height);
-      const barWidth = (frequencyDomainCanvas.width / bufferLength) * 2.5;
-      let barHeight;
-      x = 0;
-
-      for (let i = 0; i < bufferLength; i++) {
-        barHeight = freqArray[i];
-
-        frequencyDomainCtx.fillStyle = 'rgb(' + (barHeight + 100) + ',50,50)';
-        frequencyDomainCtx.fillRect(x, frequencyDomainCanvas.height - barHeight / 2, barWidth, barHeight / 2);
-
-        x += barWidth + 1;
-      }
+        return { real: dftReal, imag: dftImag };
     }
 
-    draw();
-  })
-  .catch(err => {
-    console.log('Error accessing audio stream: ' + err);
-  });
+    function calcularMagnitud(dftReal, dftImag){
+        var magnitudes = [];
+        for(var i = 0; i < dftReal.length; i++){
+            var mag = Math.sqrt(dftReal[i]*dftReal[i] + dftImag[i]*dftImag[i]);
+            magnitudes.push(mag);
+        }
 
+        return magnitudes;
+    }
+
+    var dft = calcularDFT(audioDataArray);
+    console.log(dft.real);
+    console.log(dft.imag);
+    var magnitudes = calcularMagnitud(dft.real, dft.imag);
+    console.log(magnitudes);
+    var N = magnitudes.length;
+    var frequencies = [];
+    var fftMag = [];
+    var omega = sampleRate / audioDataArray.length;
+    for(var i = 0; i < N/2; i++){
+        frequencies.push(i*omega);
+        fftMag.push(magnitudes[i]);
+    }
+
+    console.log(fftMag);
+    console.log(frequencies);
+    
+    const A2 = [0, 1, 2, 3, 4, 5];
+    const B2 = [5, 15, 8, 12, 25, 35];
+    const A3 = [0, 1, 2, 3, 4, 5];
+    const B3 = [10, 5, 3, 7, 18, 28];
+    const A4 = [0, 1, 2, 3, 4, 5];
+    const B4 = [3, 12, 6, 10, 22, 32];
+
+    // Function to create a chart
+    function createChart(containerId, title, dataA, dataB) {
+        const data = [];
+        for (let i = 0; i < dataA.length; i++) {
+            data.push([dataA[i], dataB[i]]);
+        }
+
+        Highcharts.chart(containerId, {
+            title: {
+                text: title
+            },
+            xAxis: {
+                title: {
+                    text: 'X Axis'
+                }
+            },
+            yAxis: {
+                title: {
+                    text: 'Y Axis'
+                }
+            },
+            series: [{
+                type: 'spline',
+                name: 'Interpolated Line',
+                data: data
+            }]
+        });
+    }
+
+    // Create charts
+    createChart('chartContainer1', 'Señal de voz', discreteValues, audioDataArray);
+    createChart('chartContainer2', 'Espectro de magnitud', frequencies, fftMag);
+    createChart('chartContainer3', 'Respuesta en frecuencia de filtro', A3, B3);
+    createChart('chartContainer4', 'Señal de voz filtrada', A4, B4);
+
+// You can now use `sampleRate` and `audioData` variables as needed
+}
