@@ -4,21 +4,27 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Proyecto PDS</title>
-    <script src="https://code.highcharts.com/highcharts.js"></script>
-    <script src="https://code.highcharts.com/modules/series-label.js"></script>
-    <script src="https://code.highcharts.com/modules/exporting.js"></script>
-    <script src="https://code.highcharts.com/modules/export-data.js"></script>
+    <script src="https://cdn.plot.ly/plotly-latest.min.js"></script>
+    <style>
+        .chart-container {
+            border: 1px solid #ccc;
+            padding: 10px;
+            box-sizing: border-box;
+        }
+    </style>
 </head>
 <body>
     <h1>Sube el archivo WAV</h1>
     <input type="file" id="fileInput" accept=".wav">
-    <div id="chartContainer1" style="min-width: 400px; height: 300px; margin: 0 auto"></div>
-    <div id="chartContainer2" style="min-width: 400px; height: 300px; margin: 20px auto"></div>
-    <div id="chartContainer3" style="min-width: 400px; height: 300px; margin: 20px auto"></div>
-    <div id="chartContainer4" style="min-width: 400px; height: 300px; margin: 20px auto"></div>
+    <div id="chartContainer1" class="chart-container" style="min-width: 400px; height: 300px; margin: 0 auto"></div>
+    <div id="chartContainer2" class="chart-container" style="min-width: 400px; height: 300px; margin: 20px auto"></div>
+    <div id="chartContainer3" class="chart-container" style="min-width: 400px; height: 300px; margin: 20px auto"></div>
+    <div id="chartContainer4" class="chart-container" style="min-width: 400px; height: 300px; margin: 20px auto"></div>
+    <div id="chartContainer5" class="chart-container" style="min-width: 400px; height: 300px; margin: 20px auto"></div>
+    <div id="chartContainer6" class="chart-container" style="min-width: 400px; height: 300px; margin: 20px auto"></div>
+    <div id="chartContainer7" class="chart-container" style="min-width: 400px; height: 300px; margin: 20px auto"></div>
+    <div id="chartContainer8" class="chart-container" style="min-width: 400px; height: 300px; margin: 20px auto"></div>
 
-    <script src=app.js></script>
+    <script src="app.js"></script>
 </body>
 </html>
-
-
