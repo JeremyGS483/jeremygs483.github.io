@@ -4,26 +4,190 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Proyecto PDS</title>
+    
+    <!-- Enlace a Google Fonts para Playwrite NG Modern -->
+    <link href="https://fonts.googleapis.com/css2?family=Playwrite+NG+Modern:wght@100;400&display=swap" rel="stylesheet">
+    
+    <!-- Enlace a Plotly.js para gráficos -->
     <script src="https://cdn.plot.ly/plotly-latest.min.js"></script>
+    
     <style>
+        body {
+            font-family: 'Arial', sans-serif;
+            margin: 0;
+            padding: 0;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            background-image: url('https://previews.123rf.com/images/wbraga/wbraga2111/wbraga211100011/177769180-fondo-de-placa-de-circuito-dise%C3%B1o-de-concepto-tecnol%C3%B3gico-fondo-claro-espacio-para-texto-espacio.jpg');
+            background-size: cover;
+            background-position: center;
+            background-attachment: fixed;
+            color: #333; /* Color de texto general */
+        }
+
+        .overlay {
+            background: rgba(255, 255, 255, 0.8);
+            padding: 20px;
+            border-radius: 10px;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+            text-align: center;
+            width: 80%; /* Ancho del contenedor principal */
+            max-width: 1200px; /* Ancho máximo del contenedor */
+            margin-top: 50px; /* Espacio superior */
+            animation: fadeIn 1s ease-out; /* Animación de entrada */
+        }
+
+        @keyframes fadeIn {
+            from {
+                opacity: 0;
+                transform: translateY(-20px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .header {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            margin-bottom: 20px; /* Espacio inferior del encabezado */
+            animation: slideInHeader 1s ease-out; /* Animación de entrada */
+        }
+
+        @keyframes slideInHeader {
+            from {
+                opacity: 0;
+                transform: translateY(-20px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .header img {
+            width: 100px;
+            height: auto;
+            margin: 0 20px; /* Espacio entre la imagen y el texto */
+            animation: fadeInImg 1s ease-out; /* Animación de entrada */
+        }
+
+        @keyframes fadeInImg {
+            from {
+                opacity: 0;
+            }
+            to {
+                opacity: 1;
+            }
+        }
+
+        h1 {
+            font-family: 'Playwrite NG Modern', sans-serif; /* Fuente del título */
+            font-weight: 700; /* Grosor del título */
+            color: #0047ab; /* Color azul oscuro */
+            margin: 0; /* Eliminar el margen superior e inferior */
+            font-size: 2.5rem; /* Tamaño del título */
+            text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.3); /* Sombra de texto */
+            animation: scaleTitle 0.5s cubic-bezier(0.68, -0.55, 0.27, 1.55) forwards; /* Animación de escala */
+        }
+
+        @keyframes scaleTitle {
+            from {
+                transform: scale(0.8);
+                opacity: 0;
+            }
+            to {
+                transform: scale(1);
+                opacity: 1;
+            }
+        }
+
+        .file-input-container {
+            margin-top: 20px; /* Espacio superior del contenedor del input */
+            margin-bottom: 20px; /* Espacio inferior del contenedor del input */
+            animation: fadeInFileInput 1s ease-out; /* Animación de entrada */
+        }
+
+        @keyframes fadeInFileInput {
+            from {
+                opacity: 0;
+                transform: translateY(-20px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        #fileInput {
+            padding: 10px;
+            border-radius: 5px;
+            border: 1px solid #ccc;
+            display: block;
+            margin: 0 auto; /* Centrar el input de archivo */
+            animation: fadeInInput 1s ease-out; /* Animación de entrada */
+        }
+
+        @keyframes fadeInInput {
+            from {
+                opacity: 0;
+            }
+            to {
+                opacity: 1;
+            }
+        }
+
         .chart-container {
             border: 1px solid #ccc;
             padding: 10px;
             box-sizing: border-box;
+            background-color: #fff;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+            margin-bottom: 20px;
+            transition: transform 0.3s ease-in-out; /* Transición suave */
+            animation: fadeInCharts 1s ease-out; /* Animación de entrada */
+        }
+
+        @keyframes fadeInCharts {
+            from {
+                opacity: 0;
+                transform: translateY(20px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .chart-container:hover {
+            transform: scale(1.02); /* Efecto de escala al pasar el ratón */
         }
     </style>
 </head>
 <body>
-    <h1>Sube el archivo WAV</h1>
-    <input type="file" id="fileInput" accept=".wav">
-    <div id="chartContainer1" class="chart-container" style="min-width: 400px; height: 300px; margin: 0 auto"></div>
-    <div id="chartContainer2" class="chart-container" style="min-width: 400px; height: 300px; margin: 20px auto"></div>
-    <div id="chartContainer3" class="chart-container" style="min-width: 400px; height: 300px; margin: 20px auto"></div>
-    <div id="chartContainer4" class="chart-container" style="min-width: 400px; height: 300px; margin: 20px auto"></div>
-    <div id="chartContainer5" class="chart-container" style="min-width: 400px; height: 300px; margin: 20px auto"></div>
-    <div id="chartContainer6" class="chart-container" style="min-width: 400px; height: 300px; margin: 20px auto"></div>
-    <div id="chartContainer7" class="chart-container" style="min-width: 400px; height: 300px; margin: 20px auto"></div>
-    <div id="chartContainer8" class="chart-container" style="min-width: 400px; height: 300px; margin: 20px auto"></div>
+    <div class="overlay">
+        <div class="header">
+            <img src="https://upload.wikimedia.org/wikipedia/commons/thumb/3/3a/UNMSM_coatofarms_seal.svg/1757px-UNMSM_coatofarms_seal.svg.png" alt="Imagen Izquierda">
+            <h1>INTERFAZ DE FILTRO DIGITAL</h1>
+            <img src="https://pbs.twimg.com/media/GQzLonJXUAAEXaE?format=png&name=360x360" alt="Imagen Derecha">
+        </div>
+        
+        <div class="file-input-container">
+            <input type="file" id="fileInput" accept=".wav">
+        </div>
+        
+        <div id="chartContainer1" class="chart-container" style="min-width: 400px; height: 300px;"></div>
+        <div id="chartContainer2" class="chart-container" style="min-width: 400px; height: 300px;"></div>
+        <div id="chartContainer3" class="chart-container" style="min-width: 400px; height: 300px;"></div>
+        <div id="chartContainer4" class="chart-container" style="min-width: 400px; height: 300px;"></div>
+        <div id="chartContainer5" class="chart-container" style="min-width: 400px; height: 300px;"></div>
+        <div id="chartContainer6" class="chart-container" style="min-width: 400px; height: 300px;"></div>
+        <div id="chartContainer7" class="chart-container" style="min-width: 400px; height: 300px;"></div>
+        <div id="chartContainer8" class="chart-container" style="min-width: 400px; height: 300px;"></div>
+    </div>
 
     <script src="app.js"></script>
 </body>
