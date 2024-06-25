@@ -74,21 +74,6 @@ async function processAudio(arrayBuffer) {
             return { real: real, imag: imag };
         }
 
-        function padToPowerOf2(array) {
-            const N = array.length;
-            let newSize = 1;
-
-            while (newSize < N) {
-                newSize *= 2;
-            }
-
-            const paddedArray = new Array(newSize).fill(0);
-            for (let i = 0; i < N; ++i) {
-                paddedArray[i] = array[i];
-            }
-
-            return paddedArray;
-        }
 
         // Función para calcular magnitud (de un array complejo)
         function calcularMagnitud(dftReal, dftImag) {
@@ -102,13 +87,14 @@ async function processAudio(arrayBuffer) {
             return magnitudes;
         }
 
-        // Cálculo del espectro de magnitud del audio y escalamiento de ejes
+        // Cálculo del espectro de magnitud del audio con sus frecuencias y escalamiento de ejes
         function valoresFFT(signal, fs) {
-            var samples = signal.length;
-            var deltaf = fs / samples;
 
             var audioDFT = calcularFFT(signal);
             var magnitudesDFT = calcularMagnitud(audioDFT.real, audioDFT.imag);
+
+            var samples = magnitudesDFT.length;
+            var deltaf = fs / samples;
 
             var freqDFT = [];
             var dftMag = [];
@@ -123,9 +109,8 @@ async function processAudio(arrayBuffer) {
 
         
 
-        // FILTRO DIGITAL FIR
-
-        function getFilterResponse(B, A, fs) {
+        // Función para obtener la respuesta en frecuencia de filtro
+        function calcularRespuestaFiltro(B, A, fs) {
             const freq = [];
             const nyquist = fs / 2;
 
@@ -155,69 +140,75 @@ async function processAudio(arrayBuffer) {
 
                 const magnitude = Math.sqrt((numeratorReal ** 2 + numeratorImag ** 2) / (denominatorReal ** 2 + denominatorImag ** 2));
                 filterMag.push(magnitude);
-                filterFreq.push(freq[i] * fs/2);
+                filterFreq.push(freq[i] * fs);
             }
 
             return { filterMag, filterFreq };
         }
 
-        function applyFilter(signal, B, A, fs) {
-            const isFIR = A.length === 1 && A[0] === 1;
-
-            if (isFIR) {
-                // Filtro FIR
-                return applyFIRFilter(signal, B);
-            } else {
-                // Filtro IIR
-                return applyIIRFilter(signal, B, A, fs);
-            }
-        }
-
-        function applyFIRFilter(signal, B) {
-            const M = B.length;
-            const filteredSignal = [];
-
-            for (let n = 0; n < signal.length; n++) {
-                let y = 0;
-                for (let k = 0; k < M; k++) {
-                    if (n - k >= 0) {
-                        y += B[k] * signal[n - k];
-                    }
-                }
-                filteredSignal.push(y);
-            }
-
-            return filteredSignal;
-        }
-
-        function applyIIRFilter(signal, B, A, fs) {
-            const M = B.length;
+        // Función para aplicar el filtro IIR a la señal
+        function filterIIR(B, A, signal) {
             const N = A.length;
-            const filteredSignal = [];
-            const zi = Array(N - 1).fill(0); // Initial conditions for the filter state
+            const M = B.length;
+            const len = signal.length;
+            const output = new Array(len).fill(0);
 
-            for (let n = 0; n < signal.length; n++) {
-                let y = 0;
-                let input = signal[n];
-
-                // Calculate y[n] using the difference equation
-                for (let k = 0; k < M; k++) {
-                    if (n - k >= 0) {
-                        y += B[k] * signal[n - k];
-                    }
+            if (A[0] !== 1) {
+                for (let i = 0; i < M; i++) {
+                    B[i] /= A[0];
                 }
-                for (let k = 1; k < N; k++) {
-                    if (n - k >= 0) {
-                        y -= A[k] * filteredSignal[n - k];
-                    }
+                for (let i = 1; i < N; i++) {
+                    A[i] /= A[0];
                 }
-
-                y /= A[0]; // Divide by A[0] to normalize
-
-                filteredSignal.push(y);
             }
 
-            return filteredSignal;
+            for (let n = 0; n < len; n++) {
+                output[n] = 0;
+
+                for (let i = 0; i < M; i++) {
+                    if (n - i >= 0) {
+                        output[n] += B[i] * signal[n - i];
+                    }
+                }
+
+                for (let j = 1; j < N; j++) {
+                    if (n - j >= 0) {
+                        output[n] -= A[j] * output[n - j];
+                    }
+                }
+            }
+
+            return output;
+        }
+
+        // Función para aplica el filtro FIR a la señal
+        function filterFIR(B, A, signal) {
+            // If A is not provided or is 1, we assume it to be [1]
+            if (!A || A === 1) {
+                A = [1];
+            }
+
+            const output = new Array(signal.length).fill(0);
+
+            for (let n = 0; n < signal.length; n++) {
+                let accB = 0;
+                for (let k = 0; k < B.length; k++) {
+                    if (n - k >= 0) {
+                        accB += B[k] * signal[n - k];
+                    }
+                }
+
+                let accA = 0;
+                for (let k = 1; k < A.length; k++) {
+                    if (n - k >= 0) {
+                        accA += A[k] * output[n - k];
+                    }
+                }
+
+                output[n] = (accB - accA) / A[0];
+            }
+
+            return output;
         }
 
         // Preparación del audio
@@ -228,45 +219,35 @@ async function processAudio(arrayBuffer) {
         const sampleRate = audioBuffer.sampleRate;
         const audioDataObj = audioBuffer.getChannelData(0);
 
-        console.log('Sample Rate:', sampleRate); // DEBUG
-
         // Convierte el audio en un array y obtiene valores del tiempo
         const audioData = Array.from(audioDataObj);
         const discreteValues = Array.from({length: audioData.length}, (_, i) => i);
         const timeValues = discreteValues.map(num => num / sampleRate);
         const samples = audioData.length;
 
-        // DEBUG DE RESULTADOS
-        console.log('Valores de audio: ', audioData);
-        console.log('Valores de tiempo: ', timeValues);
-
+        // Obtiene los datos de magnitud y frecuencia del audio para graficar
         var audioFFTData = valoresFFT(audioData, sampleRate);
 
-        // DEBUG DE RESULTADOS
-        console.log('Espectro de magnitud: ', audioFFTData.mag);
-        console.log('Valores de frecuencia de DFT: ', audioFFTData.freq);
-
-
         // COEF Filtro FIR
-        var h = [0.1662,   0.1668,   0.1670,   0.1670,   0.1668,   0.1662];
+        var h = [0.0088573,  0.023381,  0.065254,  0.1249,  0.17799,  0.19925,  0.17799,  0.1249,  0.065254,  0.023381,  0.0088573];
         // COEF Filtro IIR
-        var B = [0.069, 0, -0.069];
-        var A = [1, 0.2069, 0.86];
+        var B = [0.50019, -3.0012, 7.5029, -10.004, 7.5029, -3.0012, 0.50019];
+        var A = [1, -4.6252, 9.0394, -9.5353, 5.7171, -1.8451, 0.25019];
 
         // Cálculo de la respuesta en frecuencia de los filtros
-        var firRF = getFilterResponse(h, [1], sampleRate);
-        var iirRF = getFilterResponse(B, A, sampleRate);
+        var firRF = calcularRespuestaFiltro(h, [1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0], sampleRate);
+        var iirRF = calcularRespuestaFiltro(B, A, sampleRate);
 
         // Se aplica los filtros al audio
-        var audioFIR = applyFilter(audioData, h, [1], sampleRate);
-        var audioIIR = applyFilter(audioData, B, A, sampleRate);
+        var audioFIR = filterFIR(h, 1, audioData);
+        var audioIIR = filterIIR(B, A, audioData);
 
         // Se calcula la FFT de las señales filtradas
         var firFFT = valoresFFT(audioFIR, sampleRate);
         var iirFFT = valoresFFT(audioIIR, sampleRate);
 
-        // Function to create a chart
-        function createChart(containerId,   title, xData, yData) {
+        // Función para crear gráfica
+        function crearChart(containerId, title, xData, yData, ylim) {
             const trace = {
                 x: xData,
                 y: yData,
@@ -280,7 +261,8 @@ async function processAudio(arrayBuffer) {
                     title: 'X Axis'
                 },
                 yaxis: {
-                    title: 'Y Axis'
+                    title: 'Y Axis',
+                    range: ylim  // Aquí se define el rango del eje vertical
                 }
             };
 
@@ -288,14 +270,14 @@ async function processAudio(arrayBuffer) {
         }
 
         // Crear gráficas
-        createChart('chartContainer1', 'Señal de audio', timeValues, audioData);
-        createChart('chartContainer2', 'Espectro de magnitud', audioFFTData.freq, audioFFTData.mag);
-        createChart('chartContainer3', 'Respuesta en frecuencia de filtro FIR', firRF.filterFreq, firRF.filterMag);
-        createChart('chartContainer4', 'Señal de audio filtrada con FIR', timeValues, audioFIR);
-        createChart('chartContainer5', 'Espectro de señal filtrada FIR', firFFT.freq, firFFT.mag);
-        createChart('chartContainer6', 'Respuesta en frecuencia de filtro IIR', iirRF.filterFreq, iirRF.filterMag);
-        createChart('chartContainer7', 'Señal de audio filtrada con IIR', timeValues, audioIIR);
-        createChart('chartContainer8', 'Espectro de señal filtrada IIR', iirFFT.freq, iirFFT.mag);
+        crearChart('chartContainer1', 'Señal de audio', timeValues, audioData, [-0.2, 0.2]);
+        crearChart('chartContainer2', 'Espectro de magnitud', audioFFTData.freq, audioFFTData.mag, [0, 0.02]);
+        crearChart('chartContainer3', 'Respuesta en frecuencia de filtro FIR: Ventana LP de orden 10 y fc = 2.5 kHz', firRF.filterFreq, firRF.filterMag, [0, 1.5]);
+        crearChart('chartContainer4', 'Señal de audio filtrada con FIR', timeValues, audioFIR, [-0.2, 0.2]);
+        crearChart('chartContainer5', 'Espectro de señal filtrada FIR', firFFT.freq, firFFT.mag, [0, 0.02]);
+        crearChart('chartContainer6', 'Respuesta en frecuencia de filtro IIR: Butterworth HP de orden 6 y fc = 2.5 kHz', iirRF.filterFreq, iirRF.filterMag, [0, 1.5]);
+        crearChart('chartContainer7', 'Señal de audio filtrada con IIR', timeValues, audioIIR, [-0.2, 0.2]);
+        crearChart('chartContainer8', 'Espectro de señal filtrada IIR', iirFFT.freq, iirFFT.mag, [0, 0.02]);
         
     } catch (error) {
         console.error('Error al procesar el archivo de audio:', error);
